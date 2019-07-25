@@ -6,7 +6,8 @@ ifndef EXCELLENT
 # 	include excellent.mk
 # 	include subdir/include.mk
 # `subdir/Makefile` will be included and its targets made available
-# with relative names. Variables will also be namespaced.
+# with relative names. Variables defined in the Makefile will be namespaced.
+# Any targets declared .PHONY across multiple files will work as intended.
 #
 # Defines a named target `clean_include` just for deleting include.mks.
 #
@@ -19,17 +20,19 @@ ifndef EXCELLENT
 %/include.mk: %/Makefile
 	@echo 'ifndef ${subst /,_,${@D}}_dir' > $@
 	@echo '${subst /,_,${@D}}_dir := ${@D}/' >> $@
-	@sed -E -e 's/\S*(\.|\/)/$${${subst /,_,${@D}}_dir}&/g' \
-				 -e 's/clean:/clean_${subst /,_,${@D}}:/' \
-				 -e 's/all:/all_${subst /,_,${@D}}:/' \
-				 -e 's/[A-Z]{3,}/${subst /,_,${@D}}_&/g' \
+	@sed -E -e 's/\S+(\.|\/)/$${${subst /,_,${@D}}_dir}&/g' \
 				 -e 's/patsubst \$$\{${subst /,_,${@D}}_dir\}/patsubst /g' \
 				 -e '/excellent.mk$$/ d' \
 				 $^ >> $@
 	@echo '' >> $@
-	@(grep --quiet clean $@ && echo 'clean: clean_${subst /,_,${@D}}' >> $@) || true
-	@(grep --quiet all $@ && echo 'all: all_${subst /,_,${@D}}' >> $@ \
-												&& echo '${@D}: all_${subst /,_,${@D}}' >> $@) || true
+	@for VAR in `grep -E "[A-Z]+\s*:?=" $< | cut -d= -f1 | tr -d "[^:alnum:]"`; do \
+				sed -i -E "s/$$VAR/${subst /,_,${@D}}_&/" $@; \
+				done
+	@for PHONY in `grep .PHONY: $< | cut -f2 -d:`; do \
+				sed -i -E "s/^$${PHONY}:/$${PHONY}: $${PHONY}_${subst /,_,${@D}}\n$${PHONY}_${subst /,_,${@D}}:/" $@; \
+				echo ".PHONY: $${PHONY}_${subst /,_,${@D}}" >> $@; \
+				done
+	@(grep --quiet ^all_ $@ && echo '${@D}: all_${subst /,_,${@D}}' >> $@) || true
 	@echo 'delete_${subst /,_,${@D}}:' >> $@
 	@echo '	rm $@' >> $@
 	@echo 'clean_include: delete_${subst /,_,${@D}}' >> $@
