@@ -13,19 +13,16 @@ ifndef EXCELLENT
 #
 # Rules:
 # 1. Strictly downwards including only. Don't include ../sibling/include.mk.
-# 2. Don't add steps to common named targets (e.g. all), only prerequisites.
-# 3. Clean includes before running make in subdirectories
-# 	(e.g. running `make` then `make -C subdir` won't work)
 
 %/include.mk: %/Makefile ./.include.lock
 	@echo 'ifndef ${subst /,_,${@D}}_dir' > $@
 	@echo '${subst /,_,${@D}}_dir := ${@D}/' >> $@
-	@sed -E -e 's/\S+(\.|\/)/$${${subst /,_,${@D}}_dir}&/g' \
+	@sed -E -e 's/[^[:space:]"]+(\.|\/)/$${${subst /,_,${@D}}_dir}&/g' \
 				 -e 's/patsubst \$$\{${subst /,_,${@D}}_dir\}/patsubst /g' \
 				 -e '/excellent.mk$$/ d' \
 				 $^ >> $@
 	@echo '' >> $@
-	@for VAR in `grep -E "[A-Z]+\s*:?=" $< | cut -d= -f1 | tr -d "[^:alnum:]"`; do \
+	@for VAR in `grep -E "^[A-Z]+\s*:?=" $< | cut -d= -f1 | tr -d "[^:alnum:]"`; do \
 				sed -i -E "s/$$VAR/${subst /,_,${@D}}_&/" $@; \
 				done
 	@for PHONY in `grep .PHONY: $< | cut -f2 -d:`; do \
