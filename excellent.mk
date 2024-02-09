@@ -45,11 +45,11 @@ ifndef EXCELLENT
 # replace that definition with a namespaced version,
 # and then replace all references to that definition (e.g. something like ${VAR})
 	@for VAR in `grep -E "^[A-Z_]+\s*:?=" $< | cut -d= -f1 | tr -d "[^:alnum:]"`; do \
-				sed -i -E "s/^$$VAR/${subst /,_,${@D}}_&/" $@; \
-				sed -i -E "s/\\\$$(\(|\{)($$VAR)(\)|\})/\$$\1${subst /,_,${@D}}_\2\3/" $@; \
+				sed -E -i '' "s/^$$VAR/${subst /,_,${@D}}_&/" $@; \
+				sed -E -i '' "s/\\\$$(\(|\{)($$VAR)(\)|\})/\$$\1${subst /,_,${@D}}_\2\3/" $@; \
 				done
 	@for PHONY in `grep .PHONY: $< | cut -f2 -d:`; do \
-				sed -i -E "s/^$${PHONY}:/$${PHONY}: $${PHONY}_${subst /,_,${@D}}\n$${PHONY}_${subst /,_,${@D}}:/" $@; \
+				sed -E -i '' "s/^$${PHONY}:/$${PHONY}: $${PHONY}_${subst /,_,${@D}}\n$${PHONY}_${subst /,_,${@D}}:/" $@; \
 				echo ".PHONY: $${PHONY}_${subst /,_,${@D}}" >> $@; \
 				done
 	@(grep --quiet ^all_ $@ && echo '${@D}: all_${subst /,_,${@D}}' >> $@) || true
